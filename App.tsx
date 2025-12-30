@@ -302,21 +302,23 @@ const App: React.FC = () => {
                 Install App
               </button>
             )}
-
-            {/* Fullscreen Toggle */}
-            <button
-              onClick={toggleFullscreen}
-              className="p-2 rounded-lg text-slate-500 hover:bg-white/5 hover:text-slate-300 transition-colors"
-              title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-            >
-              {isFullscreen ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" /></svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>
-              )}
-            </button>
           </div>
         </header>
+
+        {/* Global UI Elements: Top-Left Fullscreen */}
+        <div className="fixed top-4 left-4 z-[60]">
+          <button
+            onClick={toggleFullscreen}
+            className="p-3 rounded-xl bg-[#131b2d]/50 backdrop-blur-md border border-white/10 text-slate-400 hover:text-slate-100 hover:bg-white/5 transition-all active:scale-95 shadow-lg group"
+            title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+          >
+            {isFullscreen ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" /></svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>
+            )}
+          </button>
+        </div>
 
         {/* Bottom Control Area */}
         <div className="shrink-0 w-full flex flex-col gap-4 md:gap-8 items-center pb-6 md:pb-12 z-40 row-start-3 landscape:row-auto landscape:justify-end landscape:pb-8">
@@ -446,59 +448,61 @@ const App: React.FC = () => {
       </main>
 
       {/* Timer Modal */}
-      {showTimerModal && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setShowTimerModal(false)}
-        >
+      {
+        showTimerModal && (
           <div
-            className="bg-[#1e293b] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-5 w-[80%] max-w-[300px] transform scale-100 animate-in zoom-in-95 duration-200 overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setShowTimerModal(false)}
           >
-            <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Set Timer</span>
-              <button onClick={() => setShowTimerModal(false)} className="text-slate-500 hover:text-slate-300">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-            </div>
+            <div
+              className="bg-[#1e293b] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-5 w-[80%] max-w-[300px] transform scale-100 animate-in zoom-in-95 duration-200 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Set Timer</span>
+                <button onClick={() => setShowTimerModal(false)} className="text-slate-500 hover:text-slate-300">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              {TIMER_OPTIONS.map(min => (
-                <button
-                  key={min}
-                  onClick={() => setTimerDuration(min)}
-                  className={`
+              <div className="grid grid-cols-2 gap-2">
+                {TIMER_OPTIONS.map(min => (
+                  <button
+                    key={min}
+                    onClick={() => setTimerDuration(min)}
+                    className={`
                         py-3 text-sm font-bold rounded-xl transition-all border border-transparent
                         ${(timerLimit === min * 60)
-                      ? `${currentTheme.bgActive} ${currentTheme.border} ${currentTheme.accentClass}`
-                      : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'
-                    }
+                        ? `${currentTheme.bgActive} ${currentTheme.border} ${currentTheme.accentClass}`
+                        : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'
+                      }
                       `}
-                >
-                  {min}m
-                </button>
-              ))}
-            </div>
+                  >
+                    {min}m
+                  </button>
+                ))}
+              </div>
 
-            <div className="mt-4 pt-3 border-t border-white/5">
-              <button
-                onClick={() => setTimerDuration(null)}
-                className={`
+              <div className="mt-4 pt-3 border-t border-white/5">
+                <button
+                  onClick={() => setTimerDuration(null)}
+                  className={`
                       w-full py-3 text-sm font-bold rounded-xl transition-colors text-center
                       ${timerLimit === null
-                    ? 'text-slate-600 cursor-default'
-                    : 'text-red-400 hover:bg-red-500/10'
-                  }
+                      ? 'text-slate-600 cursor-default'
+                      : 'text-red-400 hover:bg-red-500/10'
+                    }
                     `}
-              >
-                Stop Timer
-              </button>
+                >
+                  Stop Timer
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-    </div>
+    </div >
   );
 };
 

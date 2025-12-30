@@ -231,7 +231,8 @@ class AudioEngine {
   private scheduleNote(beatIndex: number, subdivisionIndex: number, time: number) {
     // Only fire visual callback on the main beat (subdivision 0)
     if (subdivisionIndex === 0 && this.audioContext) {
-      const drawTime = (time - this.audioContext.currentTime) * 1000;
+      // Fire callback 25ms earlier to compensate for React's state/render latency
+      const drawTime = ((time - this.audioContext.currentTime) * 1000) - 25;
       setTimeout(() => {
         if (this.onBeatCallback && this.isPlaying) {
           this.onBeatCallback(beatIndex);
