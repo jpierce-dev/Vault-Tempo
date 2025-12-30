@@ -70,39 +70,64 @@ class AudioEngine {
 
     const t = time ?? this.audioContext.currentTime;
 
-    // Metallic sound uses multiple harmonics
-    const createResonance = (freq: number, gainVal: number, decay: number) => {
-      const osc = this.audioContext!.createOscillator();
-      const gain = this.audioContext!.createGain();
+    // Metallic synthesis: Inharmonic partials + exponential decay
+    const createMetallicResonance = (baseFreq: number, gainVal: number, scale: number, decay: number) => {
+      // Metallic partials often follow inharmonic ratios
+      const partials = [1, 1.52, 2.76, 3.41, 4.1, 5.23, 6.7];
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t);
-      // Subtle pitch drop for metallic impact
-      osc.frequency.exponentialRampToValueAtTime(freq * 0.98, t + decay);
+      const masterGain = this.audioContext!.createGain();
+      masterGain.connect(this.audioContext!.destination);
+      masterGain.gain.setValueAtTime(0, t);
+      masterGain.gain.linearRampToValueAtTime(gainVal, t + 0.002);
+      masterGain.gain.exponentialRampToValueAtTime(0.001, t + decay);
 
-      gain.gain.setValueAtTime(gainVal, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + decay);
+      partials.forEach((ratio, i) => {
+        const osc = this.audioContext!.createOscillator();
+        const pGain = this.audioContext!.createGain();
 
-      osc.connect(gain);
-      gain.connect(this.audioContext!.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(baseFreq * ratio, t);
+        // Slightly detune overtime for metal feel
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * ratio * 0.99, t + decay);
 
-      osc.start(t);
-      osc.stop(t + decay + 0.1);
+        // Higher partials decay faster
+        pGain.gain.setValueAtTime(scale / (i + 1), t);
+        pGain.gain.exponentialRampToValueAtTime(0.001, t + (decay / (i + 1)));
+
+        osc.connect(pGain);
+        pGain.connect(masterGain);
+        osc.start(t);
+        osc.stop(t + decay + 0.1);
+      });
+
+      // Sharp "Ping" noise component
+      const noise = this.audioContext!.createBiquadFilter();
+      noise.type = 'highpass';
+      noise.frequency.value = 5000;
+      const noiseGain = this.audioContext!.createGain();
+      noiseGain.gain.setValueAtTime(gainVal * 0.5, t);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.01);
+
+      // Use a square wave oscillator as raw noise source
+      const noiseOsc = this.audioContext!.createOscillator();
+      noiseOsc.type = 'square';
+      noiseOsc.frequency.value = 8000;
+      noiseOsc.connect(noise);
+      noise.connect(noiseGain);
+      noiseGain.connect(this.audioContext!.destination);
+      noiseOsc.start(t);
+      noiseOsc.stop(t + 0.02);
     };
 
     if (type === SoundType.Downbeat) {
-      // High bell/metal hit (Dang!)
-      createResonance(2500, 0.25, 0.15); // Root
-      createResonance(4000, 0.15, 0.1);  // Harmonic 1
-      createResonance(5500, 0.1, 0.08);  // Harmonic 2
+      // Big metal "DANG" 
+      createMetallicResonance(2000, 0.4, 0.5, 0.5);
     } else if (type === SoundType.Beat) {
-      // Lower metallic strike (Ding)
-      createResonance(1500, 0.2, 0.1);   // Root
-      createResonance(2800, 0.12, 0.08); // Harmonic 1
-      createResonance(4100, 0.08, 0.05); // Harmonic 2
+      // Sharp metal "DING"
+      createMetallicResonance(1400, 0.25, 0.3, 0.3);
     } else {
-      // Small metallic tick
-      createResonance(3000, 0.05, 0.03);
+      // Small metal "tick"
+      createMetallicResonance(3000, 0.08, 0.1, 0.05);
     }
   }
 

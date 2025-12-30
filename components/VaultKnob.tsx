@@ -161,17 +161,22 @@ const VaultKnob: React.FC<VaultKnobProps> = ({ bpm, onBpmChange, currentBeat, th
     const x2 = center + tickOuterRadius * Math.cos(tRad);
     const y2 = center + tickOuterRadius * Math.sin(tRad);
 
+    // Only flash the part of the progress that is active (highlighted)
+    const isCurrentFlash = isFlashing && isHighlighted;
+
     ticks.push(
       <line
         key={i}
         x1={x1} y1={y1} x2={x2} y2={y2}
-        stroke={isFlashing ? "#ffffff" : (isHighlighted ? theme.primary : "#334155")}
-        strokeWidth={isFlashing ? 2.5 : 1.5}
+        stroke={isCurrentFlash ? "#ffffff" : (isHighlighted ? theme.primary : "#334155")}
+        strokeWidth={isCurrentFlash ? 3 : 1.5}
         strokeLinecap="butt"
         className="transition-all duration-150"
         style={{
-          filter: isFlashing ? `drop-shadow(0 0 5px #fff)` : 'none',
-          opacity: isFlashing ? 1 : (isHighlighted ? 0.9 : 0.4)
+          filter: isCurrentFlash ? `drop-shadow(0 0 6px ${theme.primary}) brightness(1.8)` : 'none',
+          opacity: isCurrentFlash ? 1 : (isHighlighted ? 0.9 : 0.4),
+          scale: isCurrentFlash ? 1.05 : 1,
+          transformOrigin: 'center'
         }}
       />
     );
