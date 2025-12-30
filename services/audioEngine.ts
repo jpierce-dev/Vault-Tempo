@@ -70,64 +70,56 @@ class AudioEngine {
 
     const t = time ?? this.audioContext.currentTime;
 
-    // Metallic synthesis: Inharmonic partials + exponential decay
-    const createMetallicResonance = (baseFreq: number, gainVal: number, scale: number, decay: number) => {
-      // Metallic partials often follow inharmonic ratios
-      const partials = [1, 1.52, 2.76, 3.41, 4.1, 5.23, 6.7];
+    // 1. Sharp Impact (The mechanical strike)
+    const impact = this.audioContext.createOscillator();
+    const impactGain = this.audioContext.createGain();
+    impact.type = 'square';
+    impact.frequency.setValueAtTime(type === SoundType.Downbeat ? 1200 : 800, t);
+    impactGain.gain.setValueAtTime(0.15, t);
+    impactGain.gain.exponentialRampToValueAtTime(0.001, t + 0.01);
+    impact.connect(impactGain);
+    impactGain.connect(this.audioContext.destination);
+    impact.start(t);
+    impact.stop(t + 0.02);
 
-      const masterGain = this.audioContext!.createGain();
-      masterGain.connect(this.audioContext!.destination);
-      masterGain.gain.setValueAtTime(0, t);
-      masterGain.gain.linearRampToValueAtTime(gainVal, t + 0.002);
-      masterGain.gain.exponentialRampToValueAtTime(0.001, t + decay);
+    // 2. Body Resonance (The hollow wood/plastic casing)
+    const body = this.audioContext.createOscillator();
+    const bodyGain = this.audioContext.createGain();
+    const bodyFilter = this.audioContext.createBiquadFilter();
 
-      partials.forEach((ratio, i) => {
-        const osc = this.audioContext!.createOscillator();
-        const pGain = this.audioContext!.createGain();
+    body.type = 'triangle';
+    // Classic Nikko "tock" is around 400-600Hz
+    const baseFreq = type === SoundType.Downbeat ? 700 : 500;
+    body.frequency.setValueAtTime(baseFreq, t);
+    body.frequency.exponentialRampToValueAtTime(baseFreq * 0.8, t + 0.04);
 
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(baseFreq * ratio, t);
-        // Slightly detune overtime for metal feel
-        osc.frequency.exponentialRampToValueAtTime(baseFreq * ratio * 0.99, t + decay);
+    bodyFilter.type = 'bandpass';
+    bodyFilter.frequency.value = baseFreq;
+    bodyFilter.Q.value = 5;
 
-        // Higher partials decay faster
-        pGain.gain.setValueAtTime(scale / (i + 1), t);
-        pGain.gain.exponentialRampToValueAtTime(0.001, t + (decay / (i + 1)));
+    bodyGain.gain.setValueAtTime(0, t);
+    bodyGain.gain.linearRampToValueAtTime(0.4, t + 0.002);
+    bodyGain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
 
-        osc.connect(pGain);
-        pGain.connect(masterGain);
-        osc.start(t);
-        osc.stop(t + decay + 0.1);
-      });
+    body.connect(bodyFilter);
+    bodyFilter.connect(bodyGain);
+    bodyGain.connect(this.audioContext.destination);
+    body.start(t);
+    body.stop(t + 0.1);
 
-      // Sharp "Ping" noise component
-      const noise = this.audioContext!.createBiquadFilter();
-      noise.type = 'highpass';
-      noise.frequency.value = 5000;
-      const noiseGain = this.audioContext!.createGain();
-      noiseGain.gain.setValueAtTime(gainVal * 0.5, t);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.01);
-
-      // Use a square wave oscillator as raw noise source
-      const noiseOsc = this.audioContext!.createOscillator();
-      noiseOsc.type = 'square';
-      noiseOsc.frequency.value = 8000;
-      noiseOsc.connect(noise);
-      noise.connect(noiseGain);
-      noiseGain.connect(this.audioContext!.destination);
-      noiseOsc.start(t);
-      noiseOsc.stop(t + 0.02);
-    };
-
+    // 3. Optional Bell (Downbeat only, common in Nikko models)
     if (type === SoundType.Downbeat) {
-      // Big metal "DANG" - Lower and thicker
-      createMetallicResonance(1400, 0.45, 0.6, 0.65);
-    } else if (type === SoundType.Beat) {
-      // Sharp metal "DING" - Lower
-      createMetallicResonance(800, 0.3, 0.4, 0.4);
-    } else {
-      // Small metal "tick"
-      createMetallicResonance(2200, 0.1, 0.15, 0.1);
+      const bell = this.audioContext.createOscillator();
+      const bellGain = this.audioContext.createGain();
+      bell.type = 'sine';
+      bell.frequency.setValueAtTime(2500, t);
+      bellGain.gain.setValueAtTime(0, t);
+      bellGain.gain.linearRampToValueAtTime(0.1, t + 0.005);
+      bellGain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      bell.connect(bellGain);
+      bellGain.connect(this.audioContext.destination);
+      bell.start(t);
+      bell.stop(t + 0.4);
     }
   }
 
