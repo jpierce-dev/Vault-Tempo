@@ -67,15 +67,22 @@ class AudioEngine {
     if (!this.audioContext) return;
     const t = time;
 
-    // 1. Initial Transient (The "Attack")
-    // Essential for all metronomes to provide the exact timing point.
+    // 1. Sharp Escapement Click (The metallic "ping" of the gears)
     const transient = this.audioContext.createOscillator();
     const transGain = this.audioContext.createGain();
-    transient.type = (type === 'digital' || type === 'metal') ? 'sine' : 'square';
-    transient.frequency.setValueAtTime(freq * 2, t);
 
-    transGain.gain.setValueAtTime(0.3, t);
-    transGain.gain.exponentialRampToValueAtTime(0.001, t + 0.005);
+    if (type === 'mechanical') {
+      // High-pitched metallic bite
+      transient.type = 'square';
+      transient.frequency.setValueAtTime(2500, t);
+      transGain.gain.setValueAtTime(0.2, t);
+    } else {
+      transient.type = (type === 'digital' || type === 'metal') ? 'sine' : 'square';
+      transient.frequency.setValueAtTime(freq * 2, t);
+      transGain.gain.setValueAtTime(0.3, t);
+    }
+
+    transGain.gain.exponentialRampToValueAtTime(0.001, t + 0.004);
 
     transient.connect(transGain);
     transGain.connect(this.audioContext.destination);
@@ -87,9 +94,11 @@ class AudioEngine {
     const bodyGain = this.audioContext.createGain();
 
     if (type === 'mechanical') {
+      // Warm wooden character: low-mid frequency triangle
       body.type = 'triangle';
       body.frequency.setValueAtTime(freq, t);
-      body.frequency.exponentialRampToValueAtTime(freq * 0.8, t + decay);
+      // Subtle pitch drift for organic feel
+      body.frequency.exponentialRampToValueAtTime(freq * 0.95, t + decay);
     } else if (type === 'wood') {
       body.type = 'sine';
       body.frequency.setValueAtTime(freq, t);
@@ -122,23 +131,33 @@ class AudioEngine {
     body.start(t);
     body.stop(t + decay + 0.1);
 
-    // 3. Noise Component (for mechanical/wood "snap")
-    if (type === 'mechanical' || type === 'wood') {
-      const noise = this.audioContext.createBufferSource();
-      const buffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.02, this.audioContext.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-      noise.buffer = buffer;
+    // 3. Mechanical Snap/Air (The "Room" component)
+    const noise = this.audioContext.createBufferSource();
+    const buffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.03, this.audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    noise.buffer = buffer;
 
-      const noiseFilter = this.audioContext.createBiquadFilter();
-      noiseFilter.type = 'bandpass';
-      noiseFilter.frequency.value = type === 'mechanical' ? 1000 : 800;
+    const noiseFilter = this.audioContext.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+
+    if (type === 'mechanical') {
+      // Metallic room snap
+      noiseFilter.frequency.value = 3500;
+      noiseFilter.Q.value = 1.5;
+      const noiseGain = this.audioContext.createGain();
+      noiseGain.gain.setValueAtTime(0.08, t);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(this.audioContext.destination);
+      noise.start(t);
+    } else if (type === 'wood') {
+      noiseFilter.frequency.value = 800;
       noiseFilter.Q.value = 1;
-
       const noiseGain = this.audioContext.createGain();
       noiseGain.gain.setValueAtTime(0.1, t);
       noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.015);
-
       noise.connect(noiseFilter);
       noiseFilter.connect(noiseGain);
       noiseGain.connect(this.audioContext.destination);
@@ -152,23 +171,27 @@ class AudioEngine {
     const t = time ?? this.audioContext.currentTime;
 
     if (type === SoundType.Downbeat) {
-      this.playClick(600, 0.08, 'mechanical', t);
-      // Add a subtle high-pitched bell for NIKKO accent
+      // Accent: slightly higher and louder body resonance
+      this.playClick(500, 0.1, 'mechanical', t);
+
+      // Traditional bell accent (can be mixed with the mechanical sound)
       const bell = this.audioContext.createOscillator();
       const bellGain = this.audioContext.createGain();
       bell.type = 'sine';
-      bell.frequency.setValueAtTime(1500, t);
+      bell.frequency.setValueAtTime(1800, t);
       bellGain.gain.setValueAtTime(0, t);
       bellGain.gain.linearRampToValueAtTime(0.1, t + 0.005);
-      bellGain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      bellGain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
       bell.connect(bellGain);
       bellGain.connect(this.audioContext.destination);
       bell.start(t);
       bell.stop(t + 0.3);
     } else if (type === SoundType.Beat) {
-      this.playClick(400, 0.06, 'mechanical', t);
+      // Normal Tock: Low warm resonance
+      this.playClick(350, 0.08, 'mechanical', t);
     } else {
-      this.playClick(800, 0.03, 'mechanical', t);
+      // Subbeat: Light tick
+      this.playClick(700, 0.04, 'mechanical', t);
     }
   }
 
