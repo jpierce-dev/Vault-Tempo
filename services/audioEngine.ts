@@ -62,167 +62,144 @@ class AudioEngine {
 
   // --- Sound Synthesis ---
 
-  public playMechanicalClick(type: SoundType = SoundType.Subbeat, time?: number) {
-    if (!this.audioContext) {
-      this.resumeContext();
-    }
-    if (!this.audioContext) return;
-
-    const t = time ?? this.audioContext.currentTime;
-
-    // 1. Sharp Impact (The mechanical strike)
-    const impact = this.audioContext.createOscillator();
-    const impactGain = this.audioContext.createGain();
-    impact.type = 'square';
-    impact.frequency.setValueAtTime(type === SoundType.Downbeat ? 1200 : 800, t);
-    impactGain.gain.setValueAtTime(0.15, t);
-    impactGain.gain.exponentialRampToValueAtTime(0.001, t + 0.01);
-    impact.connect(impactGain);
-    impactGain.connect(this.audioContext.destination);
-    impact.start(t);
-    impact.stop(t + 0.02);
-
-    // 2. Body Resonance (The hollow wood/plastic casing)
-    const body = this.audioContext.createOscillator();
-    const bodyGain = this.audioContext.createGain();
-    const bodyFilter = this.audioContext.createBiquadFilter();
-
-    body.type = 'triangle';
-    // Classic Nikko "tock" is around 400-600Hz
-    const baseFreq = type === SoundType.Downbeat ? 700 : 500;
-    body.frequency.setValueAtTime(baseFreq, t);
-    body.frequency.exponentialRampToValueAtTime(baseFreq * 0.8, t + 0.04);
-
-    bodyFilter.type = 'bandpass';
-    bodyFilter.frequency.value = baseFreq;
-    bodyFilter.Q.value = 5;
-
-    bodyGain.gain.setValueAtTime(0, t);
-    bodyGain.gain.linearRampToValueAtTime(0.4, t + 0.002);
-    bodyGain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
-
-    body.connect(bodyFilter);
-    bodyFilter.connect(bodyGain);
-    bodyGain.connect(this.audioContext.destination);
-    body.start(t);
-    body.stop(t + 0.1);
-
-    // 3. Optional Bell (Downbeat only, common in Nikko models)
-    if (type === SoundType.Downbeat) {
-      const bell = this.audioContext.createOscillator();
-      const bellGain = this.audioContext.createGain();
-      bell.type = 'sine';
-      bell.frequency.setValueAtTime(2500, t);
-      bellGain.gain.setValueAtTime(0, t);
-      bellGain.gain.linearRampToValueAtTime(0.1, t + 0.005);
-      bellGain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-      bell.connect(bellGain);
-      bellGain.connect(this.audioContext.destination);
-      bell.start(t);
-      bell.stop(t + 0.4);
-    }
-  }
-
-  // Classic: Bell for Downbeat, Sharp Tock for Beats
-  public playClassicClick(type: SoundType, time: number) {
+  // Professional Click Component: Sharp transient + Body
+  private playClick(freq: number, decay: number, type: 'digital' | 'wood' | 'metal' | 'mechanical', time: number) {
     if (!this.audioContext) return;
     const t = time;
 
-    if (type === SoundType.Downbeat) {
-      // Bell Sound (Sine wave with long decay)
-      const osc = this.audioContext.createOscillator();
-      const gain = this.audioContext.createGain();
+    // 1. Initial Transient (The "Attack")
+    // Essential for all metronomes to provide the exact timing point.
+    const transient = this.audioContext.createOscillator();
+    const transGain = this.audioContext.createGain();
+    transient.type = (type === 'digital' || type === 'metal') ? 'sine' : 'square';
+    transient.frequency.setValueAtTime(freq * 2, t);
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(2000, t); // High pitched bell
+    transGain.gain.setValueAtTime(0.3, t);
+    transGain.gain.exponentialRampToValueAtTime(0.001, t + 0.005);
 
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.3, t + 0.005); // Attack
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5); // Long ring decay
+    transient.connect(transGain);
+    transGain.connect(this.audioContext.destination);
+    transient.start(t);
+    transient.stop(t + 0.01);
 
-      osc.connect(gain);
-      gain.connect(this.audioContext.destination);
-      osc.start(t);
-      osc.stop(t + 0.6);
+    // 2. The Body (The "Tone")
+    const body = this.audioContext.createOscillator();
+    const bodyGain = this.audioContext.createGain();
+
+    if (type === 'mechanical') {
+      body.type = 'triangle';
+      body.frequency.setValueAtTime(freq, t);
+      body.frequency.exponentialRampToValueAtTime(freq * 0.8, t + decay);
+    } else if (type === 'wood') {
+      body.type = 'sine';
+      body.frequency.setValueAtTime(freq, t);
+      body.frequency.exponentialRampToValueAtTime(freq * 0.6, t + decay);
+    } else if (type === 'metal') {
+      body.type = 'sine';
+      body.frequency.setValueAtTime(freq, t);
+      // Add a higher harmonic for metal
+      const harm = this.audioContext.createOscillator();
+      const harmGain = this.audioContext.createGain();
+      harm.type = 'sine';
+      harm.frequency.setValueAtTime(freq * 2.1, t);
+      harmGain.gain.setValueAtTime(0.1, t);
+      harmGain.gain.exponentialRampToValueAtTime(0.001, t + decay * 0.5);
+      harm.connect(harmGain);
+      harmGain.connect(this.audioContext.destination);
+      harm.start(t);
+      harm.stop(t + decay);
+    } else {
+      body.type = 'sine';
+      body.frequency.setValueAtTime(freq, t);
     }
 
-    // The Tock Sound (for Downbeat overlay and normal Beats)
-    // We play a click on downbeat too, to give it attack
-    const osc2 = this.audioContext.createOscillator();
-    const gain2 = this.audioContext.createGain();
-    const filter = this.audioContext.createBiquadFilter();
+    bodyGain.gain.setValueAtTime(0, t);
+    bodyGain.gain.linearRampToValueAtTime(0.4, t + 0.002);
+    bodyGain.gain.exponentialRampToValueAtTime(0.001, t + decay);
 
-    osc2.type = 'square'; // Square wave for "plastic/hard" sound
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(3000, t);
+    body.connect(bodyGain);
+    bodyGain.connect(this.audioContext.destination);
+    body.start(t);
+    body.stop(t + decay + 0.1);
 
-    // Pitch
-    const baseFreq = (type === SoundType.Subbeat) ? 600 : 800;
-    osc2.frequency.setValueAtTime(baseFreq, t);
+    // 3. Noise Component (for mechanical/wood "snap")
+    if (type === 'mechanical' || type === 'wood') {
+      const noise = this.audioContext.createBufferSource();
+      const buffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.02, this.audioContext.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      noise.buffer = buffer;
 
-    // Envelope
-    gain2.gain.setValueAtTime(0, t);
-    gain2.gain.linearRampToValueAtTime(0.15, t + 0.002);
-    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.04); // Short decay
+      const noiseFilter = this.audioContext.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.value = type === 'mechanical' ? 1000 : 800;
+      noiseFilter.Q.value = 1;
 
-    osc2.connect(filter);
-    filter.connect(gain2);
-    gain2.connect(this.audioContext.destination);
+      const noiseGain = this.audioContext.createGain();
+      noiseGain.gain.setValueAtTime(0.1, t);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.015);
 
-    osc2.start(t);
-    osc2.stop(t + 0.05);
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(this.audioContext.destination);
+      noise.start(t);
+    }
+  }
+
+  public playMechanicalClick(type: SoundType = SoundType.Subbeat, time?: number) {
+    if (!this.audioContext) this.resumeContext();
+    if (!this.audioContext) return;
+    const t = time ?? this.audioContext.currentTime;
+
+    if (type === SoundType.Downbeat) {
+      this.playClick(600, 0.08, 'mechanical', t);
+      // Add a subtle high-pitched bell for NIKKO accent
+      const bell = this.audioContext.createOscillator();
+      const bellGain = this.audioContext.createGain();
+      bell.type = 'sine';
+      bell.frequency.setValueAtTime(1500, t);
+      bellGain.gain.setValueAtTime(0, t);
+      bellGain.gain.linearRampToValueAtTime(0.1, t + 0.005);
+      bellGain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      bell.connect(bellGain);
+      bellGain.connect(this.audioContext.destination);
+      bell.start(t);
+      bell.stop(t + 0.3);
+    } else if (type === SoundType.Beat) {
+      this.playClick(400, 0.06, 'mechanical', t);
+    } else {
+      this.playClick(800, 0.03, 'mechanical', t);
+    }
+  }
+
+  public playClassicClick(type: SoundType, time: number) {
+    if (type === SoundType.Downbeat) {
+      this.playClick(1000, 0.1, 'metal', time);
+    } else if (type === SoundType.Beat) {
+      this.playClick(500, 0.06, 'digital', time);
+    } else {
+      this.playClick(1500, 0.03, 'digital', time);
+    }
   }
 
   public playDigitalBeep(type: SoundType, time: number) {
-    if (!this.audioContext) return;
-    const osc = this.audioContext.createOscillator();
-    const gain = this.audioContext.createGain();
-
-    osc.type = 'sine';
-
     if (type === SoundType.Downbeat) {
-      osc.frequency.setValueAtTime(2000, time);
-      gain.gain.setValueAtTime(0.25, time);
+      this.playClick(2000, 0.05, 'digital', time);
     } else if (type === SoundType.Beat) {
-      osc.frequency.setValueAtTime(1000, time);
-      gain.gain.setValueAtTime(0.15, time);
+      this.playClick(1000, 0.04, 'digital', time);
     } else {
-      osc.frequency.setValueAtTime(800, time);
-      gain.gain.setValueAtTime(0.05, time);
+      this.playClick(1500, 0.02, 'digital', time);
     }
-
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
-    osc.connect(gain);
-    gain.connect(this.audioContext.destination);
-    osc.start(time);
-    osc.stop(time + 0.1);
   }
 
   public playWoodblock(type: SoundType, time: number) {
-    if (!this.audioContext) return;
-    const osc = this.audioContext.createOscillator();
-    const gain = this.audioContext.createGain();
-
-    osc.type = 'sine'; // Sine is good for hollow wood sounds
-
     if (type === SoundType.Downbeat) {
-      osc.frequency.setValueAtTime(1600, time);
-      gain.gain.setValueAtTime(0.3, time);
+      this.playClick(1200, 0.08, 'wood', time);
     } else if (type === SoundType.Beat) {
-      osc.frequency.setValueAtTime(1000, time);
-      gain.gain.setValueAtTime(0.2, time);
+      this.playClick(800, 0.06, 'wood', time);
     } else {
-      osc.frequency.setValueAtTime(1200, time); // Slightly different pitch for subs
-      gain.gain.setValueAtTime(0.05, time);
+      this.playClick(1500, 0.03, 'wood', time);
     }
-
-    // Quick decay for wood snap
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-
-    osc.connect(gain);
-    gain.connect(this.audioContext.destination);
-    osc.start(time);
-    osc.stop(time + 0.06);
   }
 
   private playSound(type: SoundType, time: number) {
