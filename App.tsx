@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import VaultKnob from './components/VaultKnob';
+import PulseParticles from './components/PulseParticles';
 import { audioEngine } from './services/audioEngine';
 import { DEFAULT_BPM, THEMES } from './constants';
 import { SoundTheme, ThemeColors } from './types';
@@ -410,7 +411,11 @@ const App: React.FC = () => {
       {/* Main Stage (Knob) */}
       <main className="relative z-10 w-full min-h-0 flex flex-col items-center justify-center row-start-2 landscape:row-start-1 landscape:col-start-1 landscape:h-full">
 
-        <div className="flex-1 flex items-center justify-center w-full transform scale-[0.65] xs:scale-[0.8] sm:scale-90 md:scale-100 lg:scale-110 landscape:scale-90 lg:landscape:scale-125 xl:scale-125 transition-transform duration-500 ease-out origin-center">
+        <div className="flex-1 flex items-center justify-center w-full transform scale-[0.65] xs:scale-[0.8] sm:scale-90 md:scale-100 lg:scale-110 landscape:scale-90 lg:landscape:scale-125 xl:scale-125 transition-transform duration-500 ease-out origin-center relative">
+
+          {/* Particle Effects Layer */}
+          <PulseParticles trigger={currentBeat === 0} theme={currentTheme} />
+
           <VaultKnob
             bpm={bpm}
             onBpmChange={handleBpmChange}
