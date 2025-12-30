@@ -63,7 +63,6 @@ class AudioEngine {
   // --- Sound Synthesis ---
 
   public playMechanicalClick(type: SoundType = SoundType.Subbeat, time?: number) {
-    // Ensure context is available and resumed
     if (!this.audioContext) {
       this.resumeContext();
     }
@@ -71,61 +70,40 @@ class AudioEngine {
 
     const t = time ?? this.audioContext.currentTime;
 
-    // Filtered noise/click for mechanical feel
-    const osc = this.audioContext.createOscillator();
-    const oscGain = this.audioContext.createGain();
+    // Metallic sound uses multiple harmonics
+    const createResonance = (freq: number, gainVal: number, decay: number) => {
+      const osc = this.audioContext!.createOscillator();
+      const gain = this.audioContext!.createGain();
 
-    // Impact component (sharp click)
-    const impact = this.audioContext.createOscillator();
-    const impactGain = this.audioContext.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      // Subtle pitch drop for metallic impact
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.98, t + decay);
+
+      gain.gain.setValueAtTime(gainVal, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + decay);
+
+      osc.connect(gain);
+      gain.connect(this.audioContext!.destination);
+
+      osc.start(t);
+      osc.stop(t + decay + 0.1);
+    };
 
     if (type === SoundType.Downbeat) {
-      // Main resonance
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(1200, t);
-      osc.frequency.exponentialRampToValueAtTime(400, t + 0.04);
-      oscGain.gain.setValueAtTime(0.4, t);
-      oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-
-      // Sharp high-pitched impact
-      impact.type = 'square';
-      impact.frequency.setValueAtTime(3000, t);
-      impactGain.gain.setValueAtTime(0.15, t);
+      // High bell/metal hit (Dang!)
+      createResonance(2500, 0.25, 0.15); // Root
+      createResonance(4000, 0.15, 0.1);  // Harmonic 1
+      createResonance(5500, 0.1, 0.08);  // Harmonic 2
     } else if (type === SoundType.Beat) {
-      // Lower, woodier "tock"
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(800, t);
-      osc.frequency.exponentialRampToValueAtTime(200, t + 0.03);
-      oscGain.gain.setValueAtTime(0.25, t);
-      oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-
-      impact.type = 'square';
-      impact.frequency.setValueAtTime(2000, t);
-      impactGain.gain.setValueAtTime(0.1, t);
+      // Lower metallic strike (Ding)
+      createResonance(1500, 0.2, 0.1);   // Root
+      createResonance(2800, 0.12, 0.08); // Harmonic 1
+      createResonance(4100, 0.08, 0.05); // Harmonic 2
     } else {
-      // Thin "tick" for subdivisions
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1500, t);
-      oscGain.gain.setValueAtTime(0.08, t);
-      oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
-
-      impact.type = 'square';
-      impact.frequency.setValueAtTime(4000, t);
-      impactGain.gain.setValueAtTime(0.03, t);
+      // Small metallic tick
+      createResonance(3000, 0.05, 0.03);
     }
-
-    impactGain.gain.exponentialRampToValueAtTime(0.001, t + 0.01);
-
-    osc.connect(oscGain);
-    oscGain.connect(this.audioContext.destination);
-
-    impact.connect(impactGain);
-    impactGain.connect(this.audioContext.destination);
-
-    osc.start(t);
-    osc.stop(t + 0.15);
-    impact.start(t);
-    impact.stop(t + 0.02);
   }
 
   // Classic: Bell for Downbeat, Sharp Tock for Beats
