@@ -5,9 +5,9 @@ class AudioEngine {
   private nextNoteTime: number = 0.0;
   private timerID: number | null = null;
   private isPlaying: boolean = false;
-  private scheduleAheadTime: number = 0.1; 
-  private lookahead: number = 25.0; 
-  
+  private scheduleAheadTime: number = 0.1;
+  private lookahead: number = 25.0;
+
   // Metronome State
   private bpm: number = 120;
   private beatsPerMeasure: number = 4;
@@ -17,11 +17,11 @@ class AudioEngine {
   // Counters
   private currentBeatInBar: number = 0; // 0 to beatsPerMeasure - 1
   private currentSubdivision: number = 0; // 0 to subdivision - 1
-  
+
   // Callback for visual updates (only fires on main beats)
   private onBeatCallback: ((beat: number) => void) | null = null;
 
-  constructor() {}
+  constructor() { }
 
   // Publicly exposed so UI components can trigger resume on first interaction
   public resumeContext() {
@@ -65,7 +65,7 @@ class AudioEngine {
   public playMechanicalClick(type: SoundType = SoundType.Subbeat, time?: number) {
     // Ensure context is available and resumed
     if (!this.audioContext) {
-        this.resumeContext();
+      this.resumeContext();
     }
     if (!this.audioContext) return;
 
@@ -73,38 +73,59 @@ class AudioEngine {
 
     // Filtered noise/click for mechanical feel
     const osc = this.audioContext.createOscillator();
-    const gain = this.audioContext.createGain();
-    const filter = this.audioContext.createBiquadFilter();
+    const oscGain = this.audioContext.createGain();
 
-    osc.type = 'triangle';
-    filter.type = 'highpass';
-    
+    // Impact component (sharp click)
+    const impact = this.audioContext.createOscillator();
+    const impactGain = this.audioContext.createGain();
+
     if (type === SoundType.Downbeat) {
-      osc.frequency.setValueAtTime(2000, t);
-      osc.frequency.exponentialRampToValueAtTime(100, t + 0.04);
-      filter.frequency.setValueAtTime(500, t);
-      gain.gain.setValueAtTime(0.2, t);
-    } else if (type === SoundType.Beat) {
+      // Main resonance
+      osc.type = 'triangle';
       osc.frequency.setValueAtTime(1200, t);
-      osc.frequency.exponentialRampToValueAtTime(80, t + 0.03);
-      filter.frequency.setValueAtTime(600, t);
-      gain.gain.setValueAtTime(0.12, t);
+      osc.frequency.exponentialRampToValueAtTime(400, t + 0.04);
+      oscGain.gain.setValueAtTime(0.4, t);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+
+      // Sharp high-pitched impact
+      impact.type = 'square';
+      impact.frequency.setValueAtTime(3000, t);
+      impactGain.gain.setValueAtTime(0.15, t);
+    } else if (type === SoundType.Beat) {
+      // Lower, woodier "tock"
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(800, t);
+      osc.frequency.exponentialRampToValueAtTime(200, t + 0.03);
+      oscGain.gain.setValueAtTime(0.25, t);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+
+      impact.type = 'square';
+      impact.frequency.setValueAtTime(2000, t);
+      impactGain.gain.setValueAtTime(0.1, t);
     } else {
-      // Very quiet click for subbeats
-      osc.frequency.setValueAtTime(2500, t); // Higher, thinner click
-      osc.frequency.exponentialRampToValueAtTime(500, t + 0.01);
-      filter.frequency.setValueAtTime(1000, t);
-      gain.gain.setValueAtTime(0.04, t);
+      // Thin "tick" for subdivisions
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1500, t);
+      oscGain.gain.setValueAtTime(0.08, t);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
+
+      impact.type = 'square';
+      impact.frequency.setValueAtTime(4000, t);
+      impactGain.gain.setValueAtTime(0.03, t);
     }
 
-    gain.gain.exponentialRampToValueAtTime(0.001, t + (type === SoundType.Subbeat ? 0.02 : 0.04));
+    impactGain.gain.exponentialRampToValueAtTime(0.001, t + 0.01);
 
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.audioContext.destination);
+    osc.connect(oscGain);
+    oscGain.connect(this.audioContext.destination);
+
+    impact.connect(impactGain);
+    impactGain.connect(this.audioContext.destination);
 
     osc.start(t);
-    osc.stop(t + 0.05);
+    osc.stop(t + 0.15);
+    impact.start(t);
+    impact.stop(t + 0.02);
   }
 
   // Classic: Bell for Downbeat, Sharp Tock for Beats
@@ -116,10 +137,10 @@ class AudioEngine {
       // Bell Sound (Sine wave with long decay)
       const osc = this.audioContext.createOscillator();
       const gain = this.audioContext.createGain();
-      
+
       osc.type = 'sine';
       osc.frequency.setValueAtTime(2000, t); // High pitched bell
-      
+
       gain.gain.setValueAtTime(0, t);
       gain.gain.linearRampToValueAtTime(0.3, t + 0.005); // Attack
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5); // Long ring decay
@@ -128,7 +149,7 @@ class AudioEngine {
       gain.connect(this.audioContext.destination);
       osc.start(t);
       osc.stop(t + 0.6);
-    } 
+    }
 
     // The Tock Sound (for Downbeat overlay and normal Beats)
     // We play a click on downbeat too, to give it attack
@@ -143,7 +164,7 @@ class AudioEngine {
     // Pitch
     const baseFreq = (type === SoundType.Subbeat) ? 600 : 800;
     osc2.frequency.setValueAtTime(baseFreq, t);
-    
+
     // Envelope
     gain2.gain.setValueAtTime(0, t);
     gain2.gain.linearRampToValueAtTime(0.15, t + 0.002);
@@ -152,7 +173,7 @@ class AudioEngine {
     osc2.connect(filter);
     filter.connect(gain2);
     gain2.connect(this.audioContext.destination);
-    
+
     osc2.start(t);
     osc2.stop(t + 0.05);
   }
@@ -163,9 +184,9 @@ class AudioEngine {
     const gain = this.audioContext.createGain();
 
     osc.type = 'sine';
-    
+
     if (type === SoundType.Downbeat) {
-      osc.frequency.setValueAtTime(2000, time); 
+      osc.frequency.setValueAtTime(2000, time);
       gain.gain.setValueAtTime(0.25, time);
     } else if (type === SoundType.Beat) {
       osc.frequency.setValueAtTime(1000, time);
@@ -188,7 +209,7 @@ class AudioEngine {
     const gain = this.audioContext.createGain();
 
     osc.type = 'sine'; // Sine is good for hollow wood sounds
-    
+
     if (type === SoundType.Downbeat) {
       osc.frequency.setValueAtTime(1600, time);
       gain.gain.setValueAtTime(0.3, time);
@@ -232,12 +253,12 @@ class AudioEngine {
   private scheduleNote(beatIndex: number, subdivisionIndex: number, time: number) {
     // Only fire visual callback on the main beat (subdivision 0)
     if (subdivisionIndex === 0 && this.audioContext) {
-        const drawTime = (time - this.audioContext.currentTime) * 1000;
-        setTimeout(() => {
-            if (this.onBeatCallback && this.isPlaying) {
-                this.onBeatCallback(beatIndex);
-            }
-        }, Math.max(0, drawTime));
+      const drawTime = (time - this.audioContext.currentTime) * 1000;
+      setTimeout(() => {
+        if (this.onBeatCallback && this.isPlaying) {
+          this.onBeatCallback(beatIndex);
+        }
+      }, Math.max(0, drawTime));
     }
 
     // Determine Sound Type
@@ -253,16 +274,16 @@ class AudioEngine {
     // Calculate time per subdivision
     const secondsPerBeat = 60.0 / this.bpm;
     const secondsPerSub = secondsPerBeat / this.subdivision;
-    
+
     this.nextNoteTime += secondsPerSub;
 
     // Advance counters
     this.currentSubdivision++;
-    
+
     if (this.currentSubdivision >= this.subdivision) {
       this.currentSubdivision = 0;
       this.currentBeatInBar++;
-      
+
       if (this.currentBeatInBar >= this.beatsPerMeasure) {
         this.currentBeatInBar = 0;
       }
@@ -271,14 +292,14 @@ class AudioEngine {
 
   private scheduler() {
     if (!this.audioContext) return;
-    
+
     while (this.nextNoteTime < this.audioContext.currentTime + this.scheduleAheadTime) {
       this.scheduleNote(this.currentBeatInBar, this.currentSubdivision, this.nextNoteTime);
       this.nextNote();
     }
-    
+
     if (this.isPlaying) {
-        this.timerID = window.setTimeout(() => this.scheduler(), this.lookahead);
+      this.timerID = window.setTimeout(() => this.scheduler(), this.lookahead);
     }
   }
 
