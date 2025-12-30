@@ -133,6 +133,21 @@ const VaultKnob: React.FC<VaultKnobProps> = ({ bpm, onBpmChange, currentBeat, th
   const thumbX = center + outerRadius * Math.cos(rad); // Ball on the outer glow ring edge
   const thumbY = center + outerRadius * Math.sin(rad);
 
+  // --- Beat Flashing Logic ---
+  const [flashLevel, setFlashLevel] = useState(0);
+  const lastBeatRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (currentBeat !== undefined && currentBeat !== lastBeatRef.current && currentBeat >= 0) {
+      setFlashLevel(1);
+      const timer = setTimeout(() => setFlashLevel(0), 150);
+      lastBeatRef.current = currentBeat;
+      return () => clearTimeout(timer);
+    }
+  }, [currentBeat]);
+
+  const isFlashing = flashLevel > 0;
+
   // Generate Ticks (High Density)
   const numTicks = 100;
   const ticks = [];
@@ -150,13 +165,13 @@ const VaultKnob: React.FC<VaultKnobProps> = ({ bpm, onBpmChange, currentBeat, th
       <line
         key={i}
         x1={x1} y1={y1} x2={x2} y2={y2}
-        stroke={(currentBeat >= 0) ? "#ffffff" : (isHighlighted ? theme.primary : "#334155")}
-        strokeWidth={(currentBeat >= 0) ? 2.5 : 1.5}
+        stroke={isFlashing ? "#ffffff" : (isHighlighted ? theme.primary : "#334155")}
+        strokeWidth={isFlashing ? 2.5 : 1.5}
         strokeLinecap="butt"
-        className="transition-all duration-75"
+        className="transition-all duration-150"
         style={{
-          filter: (currentBeat >= 0) ? `drop-shadow(0 0 3px #fff)` : 'none',
-          opacity: (currentBeat >= 0) ? 1 : (isHighlighted ? 0.9 : 0.4)
+          filter: isFlashing ? `drop-shadow(0 0 5px #fff)` : 'none',
+          opacity: isFlashing ? 1 : (isHighlighted ? 0.9 : 0.4)
         }}
       />
     );
@@ -258,7 +273,7 @@ const VaultKnob: React.FC<VaultKnobProps> = ({ bpm, onBpmChange, currentBeat, th
           >
             {/* Note: Grid removed as per request */}
             <div
-              className={`absolute inset-0 bg-white/10 pointer-events-none transition-opacity duration-100 ${currentBeat >= 0 ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 bg-white/10 pointer-events-none transition-opacity duration-150 ${isFlashing ? 'opacity-100' : 'opacity-0'}`}
               style={{ mixBlendMode: 'overlay' }}
             ></div>
             {/* Top "Lens" Reflection - Crucial for the look */}
