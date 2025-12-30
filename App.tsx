@@ -361,31 +361,32 @@ const App: React.FC = () => {
               <div className={`
                       absolute inset-2 rounded-full flex items-center justify-center transition-all duration-100 border border-t-white/10 border-b-black/40
                       ${isPlaying
-                  ? `bg-gradient-to-br from-[#ef4444] to-[#7f1d1d] translate-y-[2px] shadow-[inset_0_5px_10px_rgba(0,0,0,0.5)]` // Active State (Always Red/Start feel)
+                  ? `translate-y-[2px] shadow-[inset_0_5px_10px_rgba(0,0,0,0.5)]` // Active State
                   : `bg-gradient-to-br from-[#334155] to-[#0f172a] shadow-[0_5px_10px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.2)]` // Inactive State
                 }
-                  `}>
+                  `}
+                style={{
+                  background: isPlaying ? `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.gradientStop})` : undefined
+                }}
+              >
 
                 {/* Inner Glass/LED Glow */}
                 <div className={`
-                         absolute inset-0 rounded-full transition-all duration-300
-                         ${isPlaying ? 'opacity-100 animate-pulse' : 'opacity-0'}
+                        absolute inset-2 rounded-full opacity-60 blur-[2px] 
+                        ${isPlaying ? 'animate-pulse' : 'hidden'}
                       `}
-                  style={{
-                    background: `radial-gradient(circle at center, ${currentTheme.primary} 0%, transparent 70%)`,
-                    filter: 'blur(8px)'
-                  }}
+                  style={{ backgroundColor: isPlaying ? currentTheme.primary : 'transparent' }}
                 ></div>
 
-                {/* Icon */}
-                <div className={`
-                          relative z-10 transition-all duration-300
-                          ${isPlaying ? 'text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]' : 'text-slate-500'}
-                      `}>
+                <div className="relative z-10">
                   {isPlaying ? (
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="white" className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+                      <rect x="6" y="6" width="12" height="12" rx="2" />
+                    </svg>
                   ) : (
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" className="ml-1"><path d="M5 3L19 12L5 21V3Z" /></svg>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="white" className="ml-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+                      <path d="M5 3l14 9-14 9V3z" />
+                    </svg>
                   )}
                 </div>
               </div>

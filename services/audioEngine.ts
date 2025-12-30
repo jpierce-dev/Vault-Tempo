@@ -120,14 +120,14 @@ class AudioEngine {
     };
 
     if (type === SoundType.Downbeat) {
-      // Big metal "DANG" 
-      createMetallicResonance(2000, 0.4, 0.5, 0.5);
+      // Big metal "DANG" - Lower and thicker
+      createMetallicResonance(1400, 0.45, 0.6, 0.65);
     } else if (type === SoundType.Beat) {
-      // Sharp metal "DING"
-      createMetallicResonance(1400, 0.25, 0.3, 0.3);
+      // Sharp metal "DING" - Lower
+      createMetallicResonance(800, 0.3, 0.4, 0.4);
     } else {
       // Small metal "tick"
-      createMetallicResonance(3000, 0.08, 0.1, 0.05);
+      createMetallicResonance(2200, 0.1, 0.15, 0.1);
     }
   }
 

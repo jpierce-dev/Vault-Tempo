@@ -168,14 +168,14 @@ const VaultKnob: React.FC<VaultKnobProps> = ({ bpm, onBpmChange, currentBeat, th
       <line
         key={i}
         x1={x1} y1={y1} x2={x2} y2={y2}
-        stroke={isCurrentFlash ? "#ffffff" : (isHighlighted ? theme.primary : "#334155")}
-        strokeWidth={isCurrentFlash ? 3 : 1.5}
+        stroke={isCurrentFlash ? theme.primary : (isHighlighted ? theme.primary : "#334155")}
+        strokeWidth={isCurrentFlash ? 3.5 : 1.5}
         strokeLinecap="butt"
         className="transition-all duration-150"
         style={{
-          filter: isCurrentFlash ? `drop-shadow(0 0 6px ${theme.primary}) brightness(1.8)` : 'none',
+          filter: isCurrentFlash ? `drop-shadow(0 0 10px ${theme.primary}) brightness(2) saturate(2)` : 'none',
           opacity: isCurrentFlash ? 1 : (isHighlighted ? 0.9 : 0.4),
-          scale: isCurrentFlash ? 1.05 : 1,
+          scale: isCurrentFlash ? 1.08 : 1,
           transformOrigin: 'center'
         }}
       />
